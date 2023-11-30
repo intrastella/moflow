@@ -38,8 +38,8 @@ def get_parser():
     parser.add_argument('-l', '--learning_rate', type=float, default=0.001, help='Base learning rate')
     parser.add_argument('-e', '--lr_decay', type=float, default=0.999995,
                         help='Learning rate decay, applied every step of the optimization')
-    # b_n_squeeze
-    parser.add_argument('--b_n_squeeze', type=int, default=2)
+
+    # parser.add_argument('--b_n_squeeze', type=int, default=2)
     parser.add_argument('-x', '--max_epochs', type=int, default=5000, help='How many epochs to run in total?')
     parser.add_argument('-g', '--gpu', type=int, default=0, help='GPU Id to use')
     parser.add_argument('--save_epochs', type=int, default=1, help='in how many epochs, a snapshot of the model'
