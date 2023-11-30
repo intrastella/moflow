@@ -25,7 +25,7 @@ def get_parser():
     parser = argparse.ArgumentParser()
     # data I/O
     parser.add_argument('-i', '--data_dir', type=str, default='../data', help='Location for the dataset')
-    parser.add_argument('--data_name', type=str, default='qm9', choices=['qm9', 'zinc250k'], help='dataset name')
+    parser.add_argument('--data_name', type=str, default='qm9', choices=['qm9', 'zinc250k', 'custom'], help='dataset name')
     # parser.add_argument('-f', '--data_file', type=str, default='qm9_relgcn_kekulized_ggnp.npz', help='Name of the dataset')
     parser.add_argument('-o', '--save_dir', type=str, default='results/qm9',
                         help='Location for parameter checkpoints and samples')
@@ -38,6 +38,8 @@ def get_parser():
     parser.add_argument('-l', '--learning_rate', type=float, default=0.001, help='Base learning rate')
     parser.add_argument('-e', '--lr_decay', type=float, default=0.999995,
                         help='Learning rate decay, applied every step of the optimization')
+    # b_n_squeeze
+    parser.add_argument('--b_n_squeeze', type=int, default=2)
     parser.add_argument('-x', '--max_epochs', type=int, default=5000, help='How many epochs to run in total?')
     parser.add_argument('-g', '--gpu', type=int, default=0, help='GPU Id to use')
     parser.add_argument('--save_epochs', type=int, default=1, help='in how many epochs, a snapshot of the model'
@@ -81,7 +83,7 @@ def get_parser():
     return parser
 
 
-def train():
+def train(c_squeeze):
     start = time.time()
     print("Start at Time: {}".format(time.ctime()))
     parser = get_parser()
@@ -134,6 +136,18 @@ def train():
         a_n_node = 38
         a_n_type = len(atomic_num_list)  # 10
         valid_idx = transform_zinc250k.get_val_ids()
+    elif args.data_name == 'custom':
+        from data import transform_custom
+        data_file = 'custom_relgcn_kekulized_ggnp.npz'
+        transform_fn = transform_custom.transform_fn
+        atomic_num_list = transform_custom.custom_atomic_num_list
+        # mlp_channels = [1024, 512]
+        # gnn_channels = {'gcn': [16, 128], 'hidden': [256, 64]}
+        b_n_type = 4
+        b_n_squeeze = c_squeeze  # int(args.b_n_squeeze)  # 2 or 3
+        a_n_node = transform_custom.max_atoms
+        a_n_type = len(atomic_num_list)  # 10 - number of different atom types
+        valid_idx = transform_custom.get_val_ids()
     else:
         raise ValueError('Only support qm9 and zinc250k right now. '
                          'Parameters need change a little bit for other dataset.')
@@ -209,31 +223,35 @@ def train():
     for epoch in range(args.max_epochs):
         print("In epoch {}, Time: {}".format(epoch+1, time.ctime()))
         for i, batch in enumerate(train_dataloader):
-            optimizer.zero_grad()
-            # turn off shuffle to see the order with original code
-            x = batch[0].to(device)  # (256,9,5)
-            adj = batch[1].to(device)  # (256,4,9, 9)
-            adj_normalized = rescale_adj(adj).to(device)
+            if i < 2:
+                optimizer.zero_grad()
+                # turn off shuffle to see the order with original code
+                x = batch[0].to(device)  # (256,9,5)
+                adj = batch[1].to(device)  # (256,4,9, 9)
+                adj_normalized = rescale_adj(adj).to(device)
 
-            # Forward, backward and optimize
-            z, sum_log_det_jacs = model(adj, x, adj_normalized)
-            if multigpu:
-                nll = model.module.log_prob(z, sum_log_det_jacs)
-            else:
-                nll = model.log_prob(z, sum_log_det_jacs)
-            loss = nll[0] + nll[1]
-            loss.backward()
-            optimizer.step()
-            tr.update()
+                # Forward, backward and optimize
+                try:
+                    z, sum_log_det_jacs = model(adj, x, adj_normalized)
+                    if multigpu:
+                        nll = model.module.log_prob(z, sum_log_det_jacs)
+                    else:
+                        nll = model.log_prob(z, sum_log_det_jacs)
+                    loss = nll[0] + nll[1]
+                    loss.backward()
+                    optimizer.step()
+                    tr.update()
 
-            # Print log info
-            if (i+1) % log_step == 0:  # i % args.log_step == 0:
-                print('Epoch [{}/{}], Iter [{}/{}], loglik: {:.5f}, nll_x: {:.5f},'
-                      ' nll_adj: {:.5f}, {:.2f} sec/iter, {:.2f} iters/sec: '.
-                      format(epoch+1, args.max_epochs, i+1, iter_per_epoch,
-                             loss.item(), nll[0].item(), nll[1].item(),
-                             tr.get_avg_time_per_iter(), tr.get_avg_iter_per_sec()))
-                tr.print_summary()
+                    # Print log info
+                    if (i+1) % log_step == 0:  # i % args.log_step == 0:
+                        print('Epoch [{}/{}], Iter [{}/{}], loglik: {:.5f}, nll_x: {:.5f},'
+                              ' nll_adj: {:.5f}, {:.2f} sec/iter, {:.2f} iters/sec: '.
+                              format(epoch+1, args.max_epochs, i+1, iter_per_epoch,
+                                     loss.item(), nll[0].item(), nll[1].item(),
+                                     tr.get_avg_time_per_iter(), tr.get_avg_iter_per_sec()))
+                        tr.print_summary()
+                except:
+                    print(f"Failed with squeeze: {b_n_squeeze}.")
 
         if debug:
             def print_validity(ith):
@@ -276,4 +294,6 @@ def train():
 
 if __name__ == '__main__':
     # with torch.autograd.set_detect_anomaly(True):
-    train()
+    for i in range(2, 22):
+        print(f"squeeze: {i}")
+        train(i)
