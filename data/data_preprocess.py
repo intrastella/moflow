@@ -174,5 +174,5 @@ elif data_name == 'custom':
 else:
     raise ValueError("[ERROR] Unexpected value data_name={}".format(data_name))
 
-NumpyTupleDataset.save(os.path.join(data_dir, './{}_{}_kekulized_ggnp.npz'.format(data_name, data_type)), dataset)
+NumpyTupleDataset.save(os.path.join(data_dir, '{}_{}_kekulized_ggnp.npz'.format(data_name, data_type)), dataset)
 print('Total time:', time.strftime("%H:%M:%S", time.gmtime(time.time()-start_time)) )

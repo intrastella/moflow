@@ -7,6 +7,8 @@ import argparse
 from distutils.util import strtobool
 import torch
 import torch.nn as nn
+import logging
+import numpy as np
 
 from data.data_loader import NumpyTupleDataset
 from mflow.models.hyperparams import Hyperparameters
@@ -19,6 +21,13 @@ from mflow.generate import generate_mols
 
 import functools
 print = functools.partial(print, flush=True)
+
+logging.basicConfig(format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+    datefmt='%Y-%m-%d:%H:%M:%S',
+    filename="./custom.log",
+    level=logging.DEBUG)
+
+logger = logging.getLogger(__name__)
 
 
 def get_parser():
@@ -62,6 +71,7 @@ def get_parser():
     parser.add_argument('--b_conv_lu', type=int, default=1, choices=[0, 1, 2],
                         help='0: InvConv2d for 1*1 conv, 1:InvConv2dLU for 1*1 conv, 2: No 1*1 conv, '
                              'swap updating in the coupling layer')
+    parser.add_argument('--b_n_squeeze', type=int, default=2)
     # For atoms
     parser.add_argument('--a_n_flow', type=int, default=27,
                         help='Number of masked flow coupling layers per block for atom matrix')
@@ -83,11 +93,12 @@ def get_parser():
     return parser
 
 
-def train(c_squeeze):
+def train(feat):
     start = time.time()
     print("Start at Time: {}".format(time.ctime()))
     parser = get_parser()
     args = parser.parse_args()
+    args.save_dir += f'_{args.b_n_squeeze}'
 
     # Device configuration
     device = -1
@@ -144,7 +155,7 @@ def train(c_squeeze):
         # mlp_channels = [1024, 512]
         # gnn_channels = {'gcn': [16, 128], 'hidden': [256, 64]}
         b_n_type = 4
-        b_n_squeeze = c_squeeze  # int(args.b_n_squeeze)  # 2 or 3
+        b_n_squeeze = args.b_n_squeeze  # 2 or 3
         a_n_node = transform_custom.max_atoms
         a_n_type = len(atomic_num_list)  # 10 - number of different atom types
         valid_idx = transform_custom.get_val_ids()
@@ -172,13 +183,13 @@ def train(c_squeeze):
                                    seed=args.seed,
                                    noise_scale=args.noise_scale
                                    )
-    print('Model params:')
+    logger.info('Model params:')
     model_params.print()
     model = MoFlow(model_params)
     os.makedirs(args.save_dir, exist_ok=True)
     model.save_hyperparams(os.path.join(args.save_dir, 'moflow-params.json'))
     if torch.cuda.device_count() > 1 and multigpu:
-        print("Let's use", torch.cuda.device_count(), "GPUs!")
+        logger.info("Let's use", torch.cuda.device_count(), "GPUs!")
         # dim = 0 [30, xxx] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
         model = nn.DataParallel(model)
     else:
@@ -201,17 +212,16 @@ def train(c_squeeze):
     train_dataloader = torch.utils.data.DataLoader(train, batch_size=args.batch_size,
                                                    shuffle=args.shuffle, num_workers=args.num_workers)
 
-    print('==========================================')
-    print('Load data done! Time {:.2f} seconds'.format(time.time() - start))
-    print('Data shuffle: {}, Number of data loader workers: {}!'.format(args.shuffle, args.num_workers))
+    logger.info('==========================================')
+    logger.info('Load data done! Time {:.2f} seconds'.format(time.time() - start))
+    logger.info('Data shuffle: {}, Number of data loader workers: {}!'.format(args.shuffle, args.num_workers))
     if args.gpu >= 0:
-        print('Using GPU device:{}!'.format(args.gpu))
-    print('Num Train-size: {}'.format(len(train)))
-    print('Num Minibatch-size: {}'.format(args.batch_size))
-    print('Num Iter/Epoch: {}'.format(len(train_dataloader)))
-    print('Num epoch: {}'.format(args.max_epochs))
-    print('==========================================')
-
+        logger.info('Using GPU device:{}!'.format(args.gpu))
+    logger.info('Num Train-size: {}'.format(len(train)))
+    logger.info('Num Minibatch-size: {}'.format(args.batch_size))
+    logger.info('Num Iter/Epoch: {}'.format(len(train_dataloader)))
+    logger.info('Num epoch: {}'.format(args.max_epochs))
+    logger.info('==========================================')
 
     # Loss and optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
@@ -219,39 +229,37 @@ def train(c_squeeze):
     # Train the models
     iter_per_epoch = len(train_dataloader)
     log_step = args.save_interval  # 20 default
+    failed = False
     tr = TimeReport(total_iter=args.max_epochs * iter_per_epoch)
     for epoch in range(args.max_epochs):
-        print("In epoch {}, Time: {}".format(epoch+1, time.ctime()))
+        logger.info("In epoch {}, Time: {}".format(epoch+1, time.ctime()))
         for i, batch in enumerate(train_dataloader):
-            if i < 2:
-                optimizer.zero_grad()
-                # turn off shuffle to see the order with original code
-                x = batch[0].to(device)  # (256,9,5)
-                adj = batch[1].to(device)  # (256,4,9, 9)
-                adj_normalized = rescale_adj(adj).to(device)
 
-                # Forward, backward and optimize
-                try:
-                    z, sum_log_det_jacs = model(adj, x, adj_normalized)
-                    if multigpu:
-                        nll = model.module.log_prob(z, sum_log_det_jacs)
-                    else:
-                        nll = model.log_prob(z, sum_log_det_jacs)
-                    loss = nll[0] + nll[1]
-                    loss.backward()
-                    optimizer.step()
-                    tr.update()
+            optimizer.zero_grad()
+            # turn off shuffle to see the order with original code
+            x = batch[0].to(device)  # (256,9,5)
+            adj = batch[1].to(device)  # (256,4,9, 9)
+            adj_normalized = rescale_adj(adj).to(device)
 
-                    # Print log info
-                    if (i+1) % log_step == 0:  # i % args.log_step == 0:
-                        print('Epoch [{}/{}], Iter [{}/{}], loglik: {:.5f}, nll_x: {:.5f},'
-                              ' nll_adj: {:.5f}, {:.2f} sec/iter, {:.2f} iters/sec: '.
-                              format(epoch+1, args.max_epochs, i+1, iter_per_epoch,
-                                     loss.item(), nll[0].item(), nll[1].item(),
-                                     tr.get_avg_time_per_iter(), tr.get_avg_iter_per_sec()))
-                        tr.print_summary()
-                except:
-                    print(f"Failed with squeeze: {b_n_squeeze}.")
+            # Forward, backward and optimize
+            z, sum_log_det_jacs = model(adj, x, adj_normalized)
+            if multigpu:
+                nll = model.module.log_prob(z, sum_log_det_jacs)
+            else:
+                nll = model.log_prob(z, sum_log_det_jacs)
+            loss = nll[0] + nll[1]
+            loss.backward()
+            optimizer.step()
+            tr.update()
+
+            # Print log info
+            if (i + 1) % log_step == 0:  # i % args.log_step == 0:
+                logger.info('Epoch [{}/{}], Iter [{}/{}], loglik: {:.5f}, nll_x: {:.5f},'
+                            ' nll_adj: {:.5f}, {:.2f} sec/iter, {:.2f} iters/sec: '.
+                            format(epoch + 1, args.max_epochs, i + 1, iter_per_epoch,
+                                   loss.item(), nll[0].item(), nll[1].item(),
+                                   tr.get_avg_time_per_iter(), tr.get_avg_iter_per_sec()))
+                tr.print_summary()
 
         if debug:
             def print_validity(ith):
@@ -269,11 +277,11 @@ def train(c_squeeze):
             print_validity(epoch+1)
 
         # The same report for each epoch
-        print('Epoch [{}/{}], Iter [{}/{}], loglik: {:.5f}, nll_x: {:.5f},'
-              ' nll_adj: {:.5f}, {:.2f} sec/iter, {:.2f} iters/sec: '.
-              format(epoch + 1, args.max_epochs, -1, iter_per_epoch,
-                     loss.item(), nll[0].item(), nll[1].item(),
-                     tr.get_avg_time_per_iter(), tr.get_avg_iter_per_sec()))
+        logger.info('Epoch [{}/{}], Iter [{}/{}], loglik: {:.5f}, nll_x: {:.5f},'
+                ' nll_adj: {:.5f}, {:.2f} sec/iter, {:.2f} iters/sec: '.
+                format(epoch + 1, args.max_epochs, -1, iter_per_epoch,
+                loss.item(), nll[0].item(), nll[1].item(),
+                tr.get_avg_time_per_iter(), tr.get_avg_iter_per_sec()))
         tr.print_summary()
 
         # Save the model checkpoints
@@ -283,17 +291,32 @@ def train(c_squeeze):
         if (epoch + 1) % save_epochs == 0:
             if multigpu:
                 torch.save(model.module.state_dict(), os.path.join(
-                args.save_dir, 'model_snapshot_epoch_{}'.format(epoch + 1)))
+                    args.save_dir, 'model_snapshot_epoch_{}'.format(epoch + 1)))
             else:
                 torch.save(model.state_dict(), os.path.join(
-                args.save_dir, 'model_snapshot_epoch_{}'.format(epoch + 1)))
+                    args.save_dir, 'model_snapshot_epoch_{}'.format(epoch + 1)))
             tr.end()
 
-    print("[Training Ends], Start at {}, End at {}".format(time.ctime(start), time.ctime()))
+    logger.info("[Training Ends], Start at {}, End at {}".format(time.ctime(start), time.ctime()))
 
 
 if __name__ == '__main__':
     # with torch.autograd.set_detect_anomaly(True):
-    for i in range(2, 22):
-        print(f"squeeze: {i}")
-        train(i)
+
+    '''b_n_flow = np.arange(5, 10, 1)
+    b_hidden_ch = [128, 128*2, 128*3, 128*4]
+    a_n_flow = np.arange(20, 40, 1)
+    a_hidden_gnn = np.arange(64, 256, 64)
+    a_hidden_lin = (b_hidden_ch, a_hidden_gnn)
+
+    res = [{'b_n_flow': f, 'b_hidden_ch': h, 'a_n_flow': a, 'a_hidden_gnn': g, 'a_hidden_lin': l}
+           for f in b_n_flow
+           for h in b_hidden_ch
+           for a in a_n_flow
+           for g in a_hidden_gnn
+           for l in a_hidden_lin]
+
+    for feat in res:'''
+
+    feat = None
+    train(feat)
