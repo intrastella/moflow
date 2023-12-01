@@ -106,7 +106,8 @@ if data_name == 'custom':
 
     with open(file_path, "r") as ins:
         for idx, line in enumerate(ins):
-            smiles.append(line.split('\n')[0])
+            if idx < 10:
+                smiles.append(line.split('\n')[0])
         df = pd.DataFrame(smiles, columns=['smiles'])
         df.to_csv('custom.csv')
 
