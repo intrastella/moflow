@@ -1,0 +1,105 @@
+2023-12-01:20:35:14,958 INFO     [train_model.py:98] Start at Time: Fri Dec  1 20:35:14 2023
+2023-12-01:20:38:50,368 INFO     [train_model.py:98] Start at Time: Fri Dec  1 20:38:50 2023
+2023-12-01:20:38:50,372 INFO     [train_model.py:173] loading hyperparamaters from results/custom/moflow-params.json
+2023-12-01:20:38:50,460 INFO     [train_model.py:227] ==========================================
+2023-12-01:20:38:50,460 INFO     [train_model.py:228] Load data done! Time 0.09 seconds
+2023-12-01:20:38:50,460 INFO     [train_model.py:229] Data shuffle: 0, Number of data loader workers: 0!
+2023-12-01:20:38:50,460 INFO     [train_model.py:231] Using GPU device:0!
+2023-12-01:20:38:50,460 INFO     [train_model.py:232] Num Train-size: 8
+2023-12-01:20:38:50,460 INFO     [train_model.py:233] Num Minibatch-size: 256
+2023-12-01:20:38:50,460 INFO     [train_model.py:234] Num Iter/Epoch: 1
+2023-12-01:20:38:50,460 INFO     [train_model.py:235] Num epoch: 1
+2023-12-01:20:38:50,460 INFO     [train_model.py:236] ==========================================
+2023-12-01:20:38:50,461 INFO     [train_model.py:247] In epoch 1, Time: Fri Dec  1 20:38:50 2023
+2023-12-01:20:38:50,916 INFO     [train_model.py:292] Epoch [1/1], Iter [-1/1], loglik: 24.75316, nll_x: 22.82050, nll_adj: 1.93266, 0.45 sec/iter, 2.20 iters/sec: 
+2023-12-01:20:38:50,950 INFO     [train_model.py:312] [Training Ends], Start at Fri Dec  1 20:38:50 2023, End at Fri Dec  1 20:38:50 2023
+2023-12-01:21:38:49,831 INFO     [train_model.py:98] Start at Time: Fri Dec  1 21:38:49 2023
+2023-12-01:21:38:49,835 INFO     [train_model.py:197] Model params:
+2023-12-01:21:38:49,835 INFO     [train_model.py:198] None
+2023-12-01:21:38:49,877 INFO     [train_model.py:227] ==========================================
+2023-12-01:21:38:49,877 INFO     [train_model.py:228] Load data done! Time 0.05 seconds
+2023-12-01:21:38:49,877 INFO     [train_model.py:229] Data shuffle: 0, Number of data loader workers: 0!
+2023-12-01:21:38:49,877 INFO     [train_model.py:231] Using GPU device:0!
+2023-12-01:21:38:49,877 INFO     [train_model.py:232] Num Train-size: 8
+2023-12-01:21:38:49,877 INFO     [train_model.py:233] Num Minibatch-size: 256
+2023-12-01:21:38:49,877 INFO     [train_model.py:234] Num Iter/Epoch: 1
+2023-12-01:21:38:49,877 INFO     [train_model.py:235] Num epoch: 1
+2023-12-01:21:38:49,877 INFO     [train_model.py:236] ==========================================
+2023-12-01:21:38:49,878 INFO     [train_model.py:247] In epoch 1, Time: Fri Dec  1 21:38:49 2023
+2023-12-01:21:38:50,310 INFO     [train_model.py:292] Epoch [1/1], Iter [-1/1], loglik: 31.06402, nll_x: 29.47842, nll_adj: 1.58560, 0.43 sec/iter, 2.32 iters/sec: 
+2023-12-01:21:38:50,339 INFO     [train_model.py:312] [Training Ends], Start at Fri Dec  1 21:38:49 2023, End at Fri Dec  1 21:38:50 2023
+2023-12-01:21:39:10,887 INFO     [train_model.py:98] Start at Time: Fri Dec  1 21:39:10 2023
+2023-12-01:21:39:10,890 INFO     [train_model.py:197] Model params:
+2023-12-01:21:39:10,890 INFO     [train_model.py:198] None
+2023-12-01:21:39:10,933 INFO     [train_model.py:227] ==========================================
+2023-12-01:21:39:10,933 INFO     [train_model.py:228] Load data done! Time 0.05 seconds
+2023-12-01:21:39:10,933 INFO     [train_model.py:229] Data shuffle: 0, Number of data loader workers: 0!
+2023-12-01:21:39:10,933 INFO     [train_model.py:231] Using GPU device:0!
+2023-12-01:21:39:10,933 INFO     [train_model.py:232] Num Train-size: 8
+2023-12-01:21:39:10,933 INFO     [train_model.py:233] Num Minibatch-size: 256
+2023-12-01:21:39:10,933 INFO     [train_model.py:234] Num Iter/Epoch: 1
+2023-12-01:21:39:10,933 INFO     [train_model.py:235] Num epoch: 1
+2023-12-01:21:39:10,933 INFO     [train_model.py:236] ==========================================
+2023-12-01:21:39:10,934 INFO     [train_model.py:247] In epoch 1, Time: Fri Dec  1 21:39:10 2023
+2023-12-01:21:39:11,313 INFO     [train_model.py:292] Epoch [1/1], Iter [-1/1], loglik: 31.25862, nll_x: 29.69693, nll_adj: 1.56169, 0.38 sec/iter, 2.64 iters/sec: 
+2023-12-01:21:39:11,345 INFO     [train_model.py:312] [Training Ends], Start at Fri Dec  1 21:39:10 2023, End at Fri Dec  1 21:39:11 2023
+2023-12-01:21:57:05,730 INFO     [train_model.py:98] Start at Time: Fri Dec  1 21:57:05 2023
+2023-12-01:21:57:05,734 INFO     [train_model.py:197] Model params:
+2023-12-01:21:57:05,734 INFO     [train_model.py:198] None
+2023-12-01:21:57:05,778 INFO     [train_model.py:227] ==========================================
+2023-12-01:21:57:05,778 INFO     [train_model.py:228] Load data done! Time 0.05 seconds
+2023-12-01:21:57:05,778 INFO     [train_model.py:229] Data shuffle: 0, Number of data loader workers: 0!
+2023-12-01:21:57:05,778 INFO     [train_model.py:231] Using GPU device:0!
+2023-12-01:21:57:05,778 INFO     [train_model.py:232] Num Train-size: 8
+2023-12-01:21:57:05,778 INFO     [train_model.py:233] Num Minibatch-size: 256
+2023-12-01:21:57:05,778 INFO     [train_model.py:234] Num Iter/Epoch: 1
+2023-12-01:21:57:05,778 INFO     [train_model.py:235] Num epoch: 1
+2023-12-01:21:57:05,778 INFO     [train_model.py:236] ==========================================
+2023-12-01:21:57:05,779 INFO     [train_model.py:247] In epoch 1, Time: Fri Dec  1 21:57:05 2023
+2023-12-01:21:57:06,166 INFO     [train_model.py:292] Epoch [1/1], Iter [-1/1], loglik: 30.21397, nll_x: 28.67399, nll_adj: 1.53998, 0.39 sec/iter, 2.59 iters/sec: 
+2023-12-01:21:57:06,193 INFO     [train_model.py:312] [Training Ends], Start at Fri Dec  1 21:57:05 2023, End at Fri Dec  1 21:57:06 2023
+2023-12-01:21:57:16,790 INFO     [train_model.py:98] Start at Time: Fri Dec  1 21:57:16 2023
+2023-12-01:21:57:16,793 INFO     [train_model.py:197] Model params:
+2023-12-01:21:57:16,793 INFO     [train_model.py:198] None
+2023-12-01:21:57:16,836 INFO     [train_model.py:227] ==========================================
+2023-12-01:21:57:16,836 INFO     [train_model.py:228] Load data done! Time 0.05 seconds
+2023-12-01:21:57:16,836 INFO     [train_model.py:229] Data shuffle: 0, Number of data loader workers: 0!
+2023-12-01:21:57:16,836 INFO     [train_model.py:231] Using GPU device:0!
+2023-12-01:21:57:16,836 INFO     [train_model.py:232] Num Train-size: 8
+2023-12-01:21:57:16,836 INFO     [train_model.py:233] Num Minibatch-size: 256
+2023-12-01:21:57:16,836 INFO     [train_model.py:234] Num Iter/Epoch: 1
+2023-12-01:21:57:16,836 INFO     [train_model.py:235] Num epoch: 1
+2023-12-01:21:57:16,836 INFO     [train_model.py:236] ==========================================
+2023-12-01:21:57:16,837 INFO     [train_model.py:247] In epoch 1, Time: Fri Dec  1 21:57:16 2023
+2023-12-01:21:57:17,283 INFO     [train_model.py:292] Epoch [1/1], Iter [-1/1], loglik: 30.50597, nll_x: 29.00296, nll_adj: 1.50301, 0.45 sec/iter, 2.24 iters/sec: 
+2023-12-01:21:57:17,317 INFO     [train_model.py:312] [Training Ends], Start at Fri Dec  1 21:57:16 2023, End at Fri Dec  1 21:57:17 2023
+2023-12-01:22:18:17,534 INFO     [train_model.py:98] Start at Time: Fri Dec  1 22:18:17 2023
+2023-12-01:22:18:17,538 INFO     [train_model.py:197] Model params:
+2023-12-01:22:18:17,538 INFO     [train_model.py:198] None
+2023-12-01:22:18:17,581 INFO     [train_model.py:228] ==========================================
+2023-12-01:22:18:17,581 INFO     [train_model.py:229] Load data done! Time 0.05 seconds
+2023-12-01:22:18:17,581 INFO     [train_model.py:230] Data shuffle: 0, Number of data loader workers: 0!
+2023-12-01:22:18:17,581 INFO     [train_model.py:232] Using GPU device:0!
+2023-12-01:22:18:17,581 INFO     [train_model.py:233] Num Train-size: 8
+2023-12-01:22:18:17,581 INFO     [train_model.py:234] Num Minibatch-size: 256
+2023-12-01:22:18:17,581 INFO     [train_model.py:235] Num Iter/Epoch: 1
+2023-12-01:22:18:17,581 INFO     [train_model.py:236] Num epoch: 1
+2023-12-01:22:18:17,581 INFO     [train_model.py:237] ==========================================
+2023-12-01:22:18:17,582 INFO     [train_model.py:248] In epoch 1, Time: Fri Dec  1 22:18:17 2023
+2023-12-01:22:18:18,004 INFO     [train_model.py:293] Epoch [1/1], Iter [-1/1], loglik: 31.13042, nll_x: 29.63930, nll_adj: 1.49111, 0.42 sec/iter, 2.37 iters/sec: 
+2023-12-01:22:18:18,036 INFO     [train_model.py:313] [Training Ends], Start at Fri Dec  1 22:18:17 2023, End at Fri Dec  1 22:18:18 2023
+2023-12-02:04:50:07,230 INFO     [train_model.py:98] Start at Time: Sat Dec  2 04:50:07 2023
+2023-12-02:04:50:07,233 INFO     [train_model.py:197] Model params:
+2023-12-02:04:50:07,234 INFO     [train_model.py:198] None
+2023-12-02:04:50:07,276 INFO     [train_model.py:228] ==========================================
+2023-12-02:04:50:07,276 INFO     [train_model.py:229] Load data done! Time 0.05 seconds
+2023-12-02:04:50:07,276 INFO     [train_model.py:230] Data shuffle: 0, Number of data loader workers: 0!
+2023-12-02:04:50:07,276 INFO     [train_model.py:232] Using GPU device:0!
+2023-12-02:04:50:07,276 INFO     [train_model.py:233] Num Train-size: 8
+2023-12-02:04:50:07,276 INFO     [train_model.py:234] Num Minibatch-size: 256
+2023-12-02:04:50:07,276 INFO     [train_model.py:235] Num Iter/Epoch: 1
+2023-12-02:04:50:07,276 INFO     [train_model.py:236] Num epoch: 1
+2023-12-02:04:50:07,277 INFO     [train_model.py:237] ==========================================
+2023-12-02:04:50:07,278 INFO     [train_model.py:248] In epoch 1, Time: Sat Dec  2 04:50:07 2023
+2023-12-02:04:50:07,693 INFO     [train_model.py:293] Epoch [1/1], Iter [-1/1], loglik: 29.09552, nll_x: 27.57020, nll_adj: 1.52532, 0.42 sec/iter, 2.41 iters/sec: 
+2023-12-02:04:50:07,728 INFO     [train_model.py:313] [Training Ends], Start at Sat Dec  2 04:50:07 2023, End at Sat Dec  2 04:50:07 2023

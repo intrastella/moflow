@@ -180,7 +180,7 @@ def check_valency(mol):
 
 
 def correct_mol(x):
-    xsm = Chem.MolToSmiles(x, isomericSmiles=True)
+    # xsm = Chem.MolToSmiles(x, isomericSmiles=True)
     mol = x
     while True:
         flag, atomid_valence = check_valency(mol)

@@ -39,7 +39,7 @@ def get_logp(smi_obj: str):
 
 
 def get_qed(smi_obj: str):
-    return QED.qed(smi2mol(smi_obj))
+    return QED.qed(Chem.MolFromSmiles(smi_obj))
 
 
 def get_sas(smi_obj: str):
@@ -65,7 +65,7 @@ def get_df_atom_types(df: pd.DataFrame):
 
 def get_features():
     for label, cal in zip(['logP', 'qed', 'SAS'], [get_logp, get_qed, get_sas]):
-        df_custom[label] = df_custom.apply(lambda x: get_logp(x[0]), axis=1)
+        df_custom[label] = df_zinc250k.apply(lambda x: cal(x[0]), axis=1)
         labels.append(label)
     df_custom.drop(columns=['num_atoms', 'z_atomic_nums'], inplace=True)
 
@@ -106,8 +106,7 @@ if data_name == 'custom':
 
     with open(file_path, "r") as ins:
         for idx, line in enumerate(ins):
-            if idx < 10:
-                smiles.append(line.split('\n')[0])
+            smiles.append(line.split('\n')[0])
         df = pd.DataFrame(smiles, columns=['smiles'])
         df.to_csv('custom.csv')
 

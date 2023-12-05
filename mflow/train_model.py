@@ -8,7 +8,6 @@ from distutils.util import strtobool
 import torch
 import torch.nn as nn
 import logging
-import numpy as np
 
 from data.data_loader import NumpyTupleDataset
 from mflow.models.hyperparams import Hyperparameters
@@ -24,7 +23,7 @@ print = functools.partial(print, flush=True)
 
 logging.basicConfig(format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
     datefmt='%Y-%m-%d:%H:%M:%S',
-    filename="./custom.log",
+    filename="./test_c.log",
     level=logging.DEBUG)
 
 logger = logging.getLogger(__name__)
@@ -40,14 +39,14 @@ def get_parser():
                         help='Location for parameter checkpoints and samples')
     parser.add_argument('-t', '--save_interval', type=int, default=20,
                         help='Every how many epochs to write checkpoint/samples?')
-    parser.add_argument('--load_params', type=str)
-    parser.add_argument('--increment', type=str, default='False')
-    parser.add_argument('--load_snapshot', type=str, help='load the model from this path')
+    parser.add_argument('-r', '--load_params', type=int, default=0,
+                        help='Restore training from previous model checkpoint? 1 = Yes, 0 = No')
+    parser.add_argument('--load_snapshot', type=str, default='', help='load the model from this path')
     # optimization
     parser.add_argument('-l', '--learning_rate', type=float, default=0.001, help='Base learning rate')
     parser.add_argument('-e', '--lr_decay', type=float, default=0.999995,
                         help='Learning rate decay, applied every step of the optimization')
-
+    # b_n_squeeze
     # parser.add_argument('--b_n_squeeze', type=int, default=2)
     parser.add_argument('-x', '--max_epochs', type=int, default=5000, help='How many epochs to run in total?')
     parser.add_argument('-g', '--gpu', type=int, default=0, help='GPU Id to use')
@@ -71,7 +70,6 @@ def get_parser():
     parser.add_argument('--b_conv_lu', type=int, default=1, choices=[0, 1, 2],
                         help='0: InvConv2d for 1*1 conv, 1:InvConv2dLU for 1*1 conv, 2: No 1*1 conv, '
                              'swap updating in the coupling layer')
-    parser.add_argument('--b_n_squeeze', type=int, default=2)
     # For atoms
     parser.add_argument('--a_n_flow', type=int, default=27,
                         help='Number of masked flow coupling layers per block for atom matrix')
@@ -93,12 +91,11 @@ def get_parser():
     return parser
 
 
-def train(feat):
+def train(c_squeeze):
     start = time.time()
     logger.info("Start at Time: {}".format(time.ctime()))
     parser = get_parser()
     args = parser.parse_args()
-    # args.save_dir += f'_{args.b_n_squeeze}'
 
     # Device configuration
     device = -1
@@ -117,7 +114,7 @@ def train(feat):
 
     debug = args.debug
 
-    # logger.info('input args:\n', json.dumps(vars(args), indent=4, separators=(',', ':')))  # pretty print args
+    print('input args:\n', json.dumps(vars(args), indent=4, separators=(',', ':')))  # pretty print args
 
     # Model configuration
     b_hidden_ch = [int(d) for d in args.b_hidden_ch.strip(',').split(',')]
@@ -155,7 +152,7 @@ def train(feat):
         # mlp_channels = [1024, 512]
         # gnn_channels = {'gcn': [16, 128], 'hidden': [256, 64]}
         b_n_type = 4
-        b_n_squeeze = args.b_n_squeeze  # 2 or 3
+        b_n_squeeze = 2  # int(args.b_n_squeeze)  # 2 or 3
         a_n_node = transform_custom.max_atoms
         a_n_type = len(atomic_num_list)  # 10 - number of different atom types
         valid_idx = transform_custom.get_val_ids()
@@ -163,45 +160,33 @@ def train(feat):
         raise ValueError('Only support qm9 and zinc250k right now. '
                          'Parameters need change a little bit for other dataset.')
 
-    total_epoch = 0
-
-    if json.loads(args.increment.lower()):
-        from utils.model_utils import load_model
-        total_epoch = int(args.load_snapshot.split('model_snapshot_epoch_')[1])
-        snapshot_path = os.path.join(args.save_dir, args.load_snapshot)
-        hyperparams_path = os.path.join(args.save_dir, args.load_params)
-        logger.info("loading hyperparamaters from {}".format(hyperparams_path))
-        model_params = Hyperparameters(path=hyperparams_path)
-        model = load_model(snapshot_path, model_params, debug=True)
-    else:
-        model_params = Hyperparameters(b_n_type=b_n_type,  # 4,
-                                       b_n_flow=args.b_n_flow,
-                                       b_n_block=args.b_n_block,
-                                       b_n_squeeze=b_n_squeeze,
-                                       b_hidden_ch=b_hidden_ch,
-                                       b_affine=True,
-                                       b_conv_lu=args.b_conv_lu,
-                                       a_n_node=a_n_node,
-                                       a_n_type=a_n_type,
-                                       a_hidden_gnn=a_hidden_gnn,
-                                       a_hidden_lin=a_hidden_lin,
-                                       a_n_flow=args.a_n_flow,
-                                       a_n_block=args.a_n_block,
-                                       mask_row_size_list=mask_row_size_list,
-                                       mask_row_stride_list=mask_row_stride_list,
-                                       a_affine=True,
-                                       learn_dist=args.learn_dist,
-                                       seed=args.seed,
-                                       noise_scale=args.noise_scale
-                                       )
-        logger.info('Model params:')
-        logger.info(model_params.print())
-        model = MoFlow(model_params)
-        os.makedirs(args.save_dir, exist_ok=True)
-        model.save_hyperparams(os.path.join(args.save_dir, 'moflow-params.json'))
-
+    model_params = Hyperparameters(b_n_type=b_n_type,  # 4,
+                                   b_n_flow=args.b_n_flow,
+                                   b_n_block=args.b_n_block,
+                                   b_n_squeeze=b_n_squeeze,
+                                   b_hidden_ch=b_hidden_ch,
+                                   b_affine=True,
+                                   b_conv_lu=args.b_conv_lu,
+                                   a_n_node=a_n_node,
+                                   a_n_type=a_n_type,
+                                   a_hidden_gnn=a_hidden_gnn,
+                                   a_hidden_lin=a_hidden_lin,
+                                   a_n_flow=args.a_n_flow,
+                                   a_n_block=args.a_n_block,
+                                   mask_row_size_list=mask_row_size_list,
+                                   mask_row_stride_list=mask_row_stride_list,
+                                   a_affine=True,
+                                   learn_dist=args.learn_dist,
+                                   seed=args.seed,
+                                   noise_scale=args.noise_scale
+                                   )
+    print('Model params:')
+    model_params.print()
+    model = MoFlow(model_params)
+    os.makedirs(args.save_dir, exist_ok=True)
+    model.save_hyperparams(os.path.join(args.save_dir, 'moflow-params.json'))
     if torch.cuda.device_count() > 1 and multigpu:
-        logger.info("Let's use", torch.cuda.device_count(), "GPUs!")
+        print("Let's use", torch.cuda.device_count(), "GPUs!")
         # dim = 0 [30, xxx] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
         model = nn.DataParallel(model)
     else:
@@ -224,16 +209,17 @@ def train(feat):
     train_dataloader = torch.utils.data.DataLoader(train, batch_size=args.batch_size,
                                                    shuffle=args.shuffle, num_workers=args.num_workers)
 
-    logger.info('==========================================')
-    logger.info('Load data done! Time {:.2f} seconds'.format(time.time() - start))
-    logger.info('Data shuffle: {}, Number of data loader workers: {}!'.format(args.shuffle, args.num_workers))
+    print('==========================================')
+    print('Load data done! Time {:.2f} seconds'.format(time.time() - start))
+    print('Data shuffle: {}, Number of data loader workers: {}!'.format(args.shuffle, args.num_workers))
     if args.gpu >= 0:
-        logger.info('Using GPU device:{}!'.format(args.gpu))
-    logger.info('Num Train-size: {}'.format(len(train)))
-    logger.info('Num Minibatch-size: {}'.format(args.batch_size))
-    logger.info('Num Iter/Epoch: {}'.format(len(train_dataloader)))
-    logger.info('Num epoch: {}'.format(args.max_epochs))
-    logger.info('==========================================')
+        print('Using GPU device:{}!'.format(args.gpu))
+    print('Num Train-size: {}'.format(len(train)))
+    print('Num Minibatch-size: {}'.format(args.batch_size))
+    print('Num Iter/Epoch: {}'.format(len(train_dataloader)))
+    print('Num epoch: {}'.format(args.max_epochs))
+    print('==========================================')
+
 
     # Loss and optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
@@ -242,36 +228,34 @@ def train(feat):
     iter_per_epoch = len(train_dataloader)
     log_step = args.save_interval  # 20 default
     tr = TimeReport(total_iter=args.max_epochs * iter_per_epoch)
-    # args.max_epochs
-    for epoch in range(1):
-        logger.info("In epoch {}, Time: {}".format(epoch+1, time.ctime()))
+    for epoch in range(args.max_epochs):
+        logger.info("In epoch {}, Time: {}, number of batches {}".format(epoch+1, time.ctime(), len(train_dataloader)))
         for i, batch in enumerate(train_dataloader):
-            if i < 1:
-                optimizer.zero_grad()
-                # turn off shuffle to see the order with original code
-                x = batch[0].to(device)  # (256,9,5)
-                adj = batch[1].to(device)  # (256,4,9, 9)
-                adj_normalized = rescale_adj(adj).to(device)
+            optimizer.zero_grad()
+            # turn off shuffle to see the order with original code
+            x = batch[0].to(device)  # (256,9,5)
+            adj = batch[1].to(device)  # (256,4,9, 9)
+            adj_normalized = rescale_adj(adj).to(device)
 
-                # Forward, backward and optimize
-                z, sum_log_det_jacs = model(adj, x, adj_normalized)
-                if multigpu:
-                    nll = model.module.log_prob(z, sum_log_det_jacs)
-                else:
-                    nll = model.log_prob(z, sum_log_det_jacs)
-                loss = nll[0] + nll[1]
-                loss.backward()
-                optimizer.step()
-                tr.update()
+            # Forward, backward and optimize
+            z, sum_log_det_jacs = model(adj, x, adj_normalized)
+            if multigpu:
+                nll = model.module.log_prob(z, sum_log_det_jacs)
+            else:
+                nll = model.log_prob(z, sum_log_det_jacs)
+            loss = nll[0] + nll[1]
+            loss.backward()
+            optimizer.step()
+            tr.update()
 
-                # Print log info
-                if (i + 1) % log_step == 0:  # i % args.log_step == 0:
-                    logger.info('Epoch [{}/{}], Iter [{}/{}], loglik: {:.5f}, nll_x: {:.5f},'
-                                ' nll_adj: {:.5f}, {:.2f} sec/iter, {:.2f} iters/sec: '.
-                                format(epoch + 1, args.max_epochs, i + 1, iter_per_epoch,
-                                       loss.item(), nll[0].item(), nll[1].item(),
-                                       tr.get_avg_time_per_iter(), tr.get_avg_iter_per_sec()))
-                    tr.print_summary()
+            # Print log info
+            if (i+1) % log_step == 0:  # i % args.log_step == 0:
+                logger.info('Epoch [{}/{}], Iter [{}/{}], loglik: {:.5f}, nll_x: {:.5f},'
+                      ' nll_adj: {:.5f}, {:.2f} sec/iter, {:.2f} iters/sec: '.
+                      format(epoch+1, args.max_epochs, i+1, iter_per_epoch,
+                             loss.item(), nll[0].item(), nll[1].item(),
+                             tr.get_avg_time_per_iter(), tr.get_avg_iter_per_sec()))
+                tr.print_summary()
 
         if debug:
             def print_validity(ith):
@@ -289,11 +273,11 @@ def train(feat):
             print_validity(epoch+1)
 
         # The same report for each epoch
-        logger.info('Epoch [{}/{}], Iter [{}/{}], loglik: {:.5f}, nll_x: {:.5f},'
-                ' nll_adj: {:.5f}, {:.2f} sec/iter, {:.2f} iters/sec: '.
-                format(epoch + 1, args.max_epochs, -1, iter_per_epoch,
-                loss.item(), nll[0].item(), nll[1].item(),
-                tr.get_avg_time_per_iter(), tr.get_avg_iter_per_sec()))
+        print('Epoch [{}/{}], Iter [{}/{}], loglik: {:.5f}, nll_x: {:.5f},'
+              ' nll_adj: {:.5f}, {:.2f} sec/iter, {:.2f} iters/sec: '.
+              format(epoch + 1, args.max_epochs, -1, iter_per_epoch,
+                     loss.item(), nll[0].item(), nll[1].item(),
+                     tr.get_avg_time_per_iter(), tr.get_avg_iter_per_sec()))
         tr.print_summary()
 
         # Save the model checkpoints
@@ -303,32 +287,15 @@ def train(feat):
         if (epoch + 1) % save_epochs == 0:
             if multigpu:
                 torch.save(model.module.state_dict(), os.path.join(
-                    args.save_dir, 'model_snapshot_epoch_{}'.format(epoch + 1 + total_epoch)))
+                args.save_dir, 'model_snapshot_epoch_{}'.format(epoch + 1)))
             else:
                 torch.save(model.state_dict(), os.path.join(
-                    args.save_dir, 'model_snapshot_epoch_{}'.format(epoch + 1 + total_epoch)))
+                args.save_dir, 'model_snapshot_epoch_{}'.format(epoch + 1)))
             tr.end()
 
-    logger.info("[Training Ends], Start at {}, End at {}".format(time.ctime(start), time.ctime()))
+    print("[Training Ends], Start at {}, End at {}".format(time.ctime(start), time.ctime()))
 
 
 if __name__ == '__main__':
     # with torch.autograd.set_detect_anomaly(True):
-
-    '''b_n_flow = np.arange(5, 10, 1)
-    b_hidden_ch = [128, 128*2, 128*3, 128*4]
-    a_n_flow = np.arange(20, 40, 1)
-    a_hidden_gnn = np.arange(64, 256, 64)
-    a_hidden_lin = (b_hidden_ch, a_hidden_gnn)
-
-    res = [{'b_n_flow': f, 'b_hidden_ch': h, 'a_n_flow': a, 'a_hidden_gnn': g, 'a_hidden_lin': l}
-           for f in b_n_flow
-           for h in b_hidden_ch
-           for a in a_n_flow
-           for g in a_hidden_gnn
-           for l in a_hidden_lin]
-
-    for feat in res:'''
-
-    feat = None
-    train(feat)
+    train(2)
