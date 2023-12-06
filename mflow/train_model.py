@@ -21,12 +21,19 @@ from mflow.generate import generate_mols
 import functools
 print = functools.partial(print, flush=True)
 
-logging.basicConfig(format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
-    datefmt='%Y-%m-%d:%H:%M:%S',
-    filename="./test_c.log",
-    level=logging.DEBUG)
-
+# Create a custom logger
 logger = logging.getLogger(__name__)
+
+# Create handlers
+f_handler = logging.FileHandler('/scratch-emmy/usr/becmuamb/new_5.log')
+f_handler.setLevel(logging.INFO)
+
+# Create formatters and add it to handlers
+f_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+f_handler.setFormatter(f_format)
+
+# Add handlers to the logger
+logger.addHandler(f_handler)
 
 
 def get_parser():
@@ -186,7 +193,7 @@ def train(c_squeeze):
     os.makedirs(args.save_dir, exist_ok=True)
     model.save_hyperparams(os.path.join(args.save_dir, 'moflow-params.json'))
     if torch.cuda.device_count() > 1 and multigpu:
-        print("Let's use", torch.cuda.device_count(), "GPUs!")
+        logger.info(f"Let's use {torch.cuda.device_count()} GPUs!")
         # dim = 0 [30, xxx] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
         model = nn.DataParallel(model)
     else:

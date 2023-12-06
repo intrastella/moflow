@@ -1,2 +1,2 @@
-max_atoms = "50"
-atom_types = [ 6, 7, 8, 16, 17, 35,]
+max_atoms = "52"
+atom_types = [ 6, 7, 8, 9, 16, 17, 35,]
